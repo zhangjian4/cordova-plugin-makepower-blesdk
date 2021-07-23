@@ -1,7 +1,10 @@
 package cc.makepower.blesdk;
 
 import android.bluetooth.BluetoothDevice;
+import android.text.format.DateUtils;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.megster.cordova.ble.central.BLECentralPlugin;
 import com.megster.cordova.ble.central.Peripheral;
 
@@ -17,11 +20,16 @@ import org.json.JSONObject;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import cc.makepower.blesdk.bean.BleInfoEntity;
 import cc.makepower.blesdk.bean.LockStateEntity;
@@ -34,9 +42,18 @@ import cc.makepower.blesdk.bean.ResultBean;
 public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
     private SdkMethodInterFace bleEntity;
     private static final String BLECONNECT = "bleConnect";
-    private static final String GETLOCKCODE = "getLockCode";
-    private static final String OPENLOCK = "openLock";
     private static final String DISCONNECT = "disConnect";
+    private static final String GETBLEINFO = "getBleInfo";
+    private static final String INITKEY = "initKey";
+    private static final String SETBLECLOCK = "setBleClock";
+    private static final String INITLOCKCODE = "initLockCode";
+    private static final String GETLOCKCODE = "getLockCode";
+    private static final String GETKEYCODE = "getKeyCode";
+    private static final String GETLOCKSTATE = "getLockState";
+    private static final String OPENLOCK = "openLock";
+    private static final String SETTASK = "setTask";
+    private static final String READLOG = "readLog";
+    private static final String REMOVELOG = "removeLog";
     private String type = null;
     private Map<String, CallbackContext> callbackContextMap = new HashMap<>();
 
@@ -45,36 +62,84 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
         try {
             if (action.equals("setType")) {
                 String type = args.getString(0);
-                this.setType(type, callbackContext);
+                this.setType(type);
                 callbackContext.success();
                 return true;
             } else if (this.bleEntity == null) {
                 throw new RuntimeException("未设置协议类型");
-            } else {
-                callbackContextMap.put(action, callbackContext);
-                if (action.equals(BLECONNECT)) {
+            }
+            callbackContextMap.put(action, callbackContext);
+            switch (action) {
+                case BLECONNECT: {
                     String macAddress = args.getString(0);
+                    BluetoothDevice device = getDevice(macAddress);
                     String secretKey = args.getString(1);
                     String secretLock = args.getString(2);
                     String userId = args.getString(3);
                     Boolean isKeyDevice = args.getBoolean(4);
-                    this.bleConnect(macAddress, secretKey, secretLock, userId, isKeyDevice);
+                    bleEntity.bleConnect(device, cordova.getContext(), secretKey, secretLock, userId, isKeyDevice);
                     return true;
-//            this.bleEntity.bleConnect();
-                } else if (action.equals(DISCONNECT)) {
+                }
+                case DISCONNECT: {
                     bleEntity.disConnect();
                     // 重新创建实例,不然下次会连不上
                     bleEntity = createEntity(type);
                     return true;
-                } else if (action.equals(GETLOCKCODE)) {
-                    this.bleEntity.getLockCode();
-                    return true;
-                } else if (action.equals(OPENLOCK)) {
-                    String lockCode = args.getString(0);
-                    this.bleEntity.openLock(lockCode, new Date(), new Date(System.currentTimeMillis() + 5000));
+                }
+                case GETBLEINFO: {
+                    bleEntity.getBleInfo();
                     return true;
                 }
-
+                case INITKEY: {
+                    this.bleEntity.initKey();
+                    return true;
+                }
+                case SETBLECLOCK: {
+                    Date currentDate = toDate(args.get(0));
+                    this.bleEntity.setBleClock(currentDate);
+                    return true;
+                }
+                case INITLOCKCODE: {
+                    String lockCode = args.getString(0);
+                    this.bleEntity.initLockCode(lockCode);
+                    return true;
+                }
+                case GETLOCKCODE: {
+                    this.bleEntity.getLockCode();
+                    return true;
+                }
+                case GETKEYCODE: {
+                    this.bleEntity.getKeyCode();
+                    return true;
+                }
+                case GETLOCKSTATE: {
+                    this.bleEntity.getLockState();
+                    return true;
+                }
+                case OPENLOCK: {
+                    String lockCode = args.getString(0);
+                    Date startTime = toDate(args.get(1));
+                    Date endTime = toDate(args.get(2));
+                    this.bleEntity.openLock(lockCode, startTime, endTime);
+                    return true;
+                }
+                case SETTASK: {
+                    List<String> lockCodes = toStringList(args.getJSONArray(0));
+                    List<String> areas = toStringList(args.getJSONArray(1));
+                    Date startTime = toDate(args.get(2));
+                    Date endTime = toDate(args.get(3));
+                    int offLineTime = args.getInt(4);
+                    this.bleEntity.setTask(lockCodes, areas, startTime, endTime, offLineTime);
+                    return true;
+                }
+                case READLOG: {
+                    this.bleEntity.readLog();
+                    return true;
+                }
+                case REMOVELOG: {
+                    this.bleEntity.removeLog();
+                    return true;
+                }
             }
         } catch (Exception e) {
             LOG.e("MPBLE", e.getMessage(), e);
@@ -85,7 +150,8 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
         return false;
     }
 
-    public void setType(String type, CallbackContext callbackContext) {
+
+    public void setType(String type) {
         if (bleEntity != null) {
             try {
                 bleEntity.disConnect();
@@ -118,23 +184,6 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
     }
 
 
-    public void bleConnect(String macAddress, String secretKey, String secretLock, String userId, boolean isKeyDevice) {
-        try {
-            BLECentralPlugin ble = (BLECentralPlugin) webView.getPluginManager().getPlugin("BLE");
-            Field peripheralsField = BLECentralPlugin.class.getDeclaredField("peripherals");
-            peripheralsField.setAccessible(true);
-            Map<String, Peripheral> peripherals = (Map<String, Peripheral>) peripheralsField.get(ble);
-            Peripheral peripheral = peripherals.get(macAddress);
-            BluetoothDevice device = peripheral.getDevice();
-            if (device == null) {
-                throw new RuntimeException("未找到蓝牙设备");
-            }
-            bleEntity.bleConnect(device, cordova.getContext(), secretKey, secretLock, userId, isKeyDevice);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
     public void executeCallback(String actionName, ResultBean resultBean) {
         LOG.d("MPBLE Callback", actionName + ":" + resultBean.isRet() + "," + resultBean.getMsg());
         CallbackContext callbackContext = callbackContextMap.remove(actionName);
@@ -146,7 +195,18 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
                 } else if (data instanceof String) {
                     callbackContext.success((String) data);
                 } else {
-                    callbackContext.success();
+                    try {
+                        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+                        String json = gson.toJson(data);
+                        if (data instanceof List) {
+                            callbackContext.success(new JSONArray(json));
+                        } else {
+                            callbackContext.success(new JSONObject(json));
+                        }
+                    } catch (Exception e) {
+                        LOG.e("MPBLE", e.getMessage(), e);
+                        callbackContext.success();
+                    }
                 }
             } else {
                 callbackContext.error(resultBean.getMsg());
@@ -171,22 +231,22 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
 
     @Override
     public void getKeyCodeCallBack(ResultBean<String> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(GETKEYCODE, resultBean);
     }
 
     @Override
     public void getBleInfoCallBack(ResultBean<BleInfoEntity> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(GETBLEINFO, resultBean);
     }
 
     @Override
     public void getLockStateCallBack(ResultBean<LockStateEntity> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(GETLOCKSTATE, resultBean);
     }
 
     @Override
     public void setBleClockCallBack(ResultBean resultBean) {
-        System.out.println(resultBean);
+        executeCallback(SETBLECLOCK, resultBean);
     }
 
     @Override
@@ -196,26 +256,77 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
 
     @Override
     public void setTaskCallBack(ResultBean resultBean) {
-        System.out.println(resultBean);
+        executeCallback(SETTASK, resultBean);
     }
 
     @Override
     public void initKeyCallBack(ResultBean<String> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(INITKEY, resultBean);
     }
 
     @Override
     public void initLockCodeCallBack(ResultBean<String> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(INITLOCKCODE, resultBean);
     }
 
     @Override
     public void readLogCallBack(ResultBean<List<LogEntity>> resultBean) {
-        System.out.println(resultBean);
+        executeCallback(READLOG, resultBean);
     }
 
     @Override
     public void removeLogCallBack(ResultBean resultBean) {
-        System.out.println(resultBean);
+        executeCallback(REMOVELOG, resultBean);
+    }
+
+    private BluetoothDevice getDevice(String mac) {
+        Peripheral peripheral = null;
+        try {
+            BLECentralPlugin ble = (BLECentralPlugin) webView.getPluginManager().getPlugin("BLE");
+            Field peripheralsField = BLECentralPlugin.class.getDeclaredField("peripherals");
+            peripheralsField.setAccessible(true);
+            Map<String, Peripheral> peripherals = (Map<String, Peripheral>) peripheralsField.get(ble);
+            peripheral = peripherals.get(mac);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+        if (peripheral == null) {
+            throw new RuntimeException("未找到蓝牙设备");
+        }
+        return peripheral.getDevice();
+    }
+
+    private List<String> toStringList(JSONArray jsonArray) {
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < jsonArray.length(); i++) {
+            try {
+                list.add(jsonArray.getString(i));
+            } catch (JSONException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+        return list;
+    }
+
+    private Date toDate(Object dateStr) {
+        if (dateStr == null || "".equals(dateStr)) {
+            return null;
+        }
+        if (dateStr instanceof String) {
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            try {
+                return format.parse((String) dateStr);
+            } catch (ParseException e) {
+                TimeZone tz = TimeZone.getTimeZone("UTC");
+                format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                format.setTimeZone(tz);
+                try {
+                    return format.parse((String) dateStr);
+                } catch (ParseException parseException) {
+                    throw new RuntimeException(e.getMessage(), e);
+                }
+            }
+        }
+        return null;
     }
 }
