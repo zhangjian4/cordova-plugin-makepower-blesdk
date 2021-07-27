@@ -1,15 +1,12 @@
 package cc.makepower.blesdk;
 
 import android.bluetooth.BluetoothDevice;
-import android.text.format.DateUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.megster.cordova.ble.central.BLECentralPlugin;
 import com.megster.cordova.ble.central.Peripheral;
 
-import org.apache.cordova.CordovaActivity;
-import org.apache.cordova.CordovaInterfaceImpl;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 
@@ -23,7 +20,6 @@ import java.lang.reflect.Field;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -56,6 +52,8 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
     private static final String REMOVELOG = "removeLog";
     private String type = null;
     private Map<String, CallbackContext> callbackContextMap = new HashMap<>();
+    private Peripheral device;
+    private static final String LOG_TAG = "MPBLE";
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -72,12 +70,13 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
             switch (action) {
                 case BLECONNECT: {
                     String macAddress = args.getString(0);
-                    BluetoothDevice device = getDevice(macAddress);
+                    this.device = getDevice(macAddress);
                     String secretKey = args.getString(1);
                     String secretLock = args.getString(2);
                     String userId = args.getString(3);
                     Boolean isKeyDevice = args.getBoolean(4);
-                    bleEntity.bleConnect(device, cordova.getContext(), secretKey, secretLock, userId, isKeyDevice);
+                    bleEntity.bleConnect(device.getDevice(), cordova.getContext(), secretKey, secretLock, userId, isKeyDevice);
+
                     return true;
                 }
                 case DISCONNECT: {
@@ -142,7 +141,7 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
                 }
             }
         } catch (Exception e) {
-            LOG.e("MPBLE", e.getMessage(), e);
+            LOG.e(LOG_TAG, e.getMessage(), e);
             callbackContextMap.remove(action);
             callbackContext.error(e.getMessage());
             return true;
@@ -156,7 +155,7 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
             try {
                 bleEntity.disConnect();
             } catch (Exception e) {
-                LOG.e("MPBLE", e.getMessage(), e);
+                LOG.e(LOG_TAG, e.getMessage(), e);
             }
         }
         bleEntity = createEntity(type);
@@ -204,7 +203,7 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
                             callbackContext.success(new JSONObject(json));
                         }
                     } catch (Exception e) {
-                        LOG.e("MPBLE", e.getMessage(), e);
+                        LOG.e(LOG_TAG, e.getMessage(), e);
                         callbackContext.success();
                     }
                 }
@@ -216,11 +215,17 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
 
     @Override
     public void bleConnectCallBack(ResultBean resultBean) {
+        if (device != null && resultBean.isRet()) {
+            setConnected(device, true);
+        }
         executeCallback(BLECONNECT, resultBean);
     }
 
     @Override
     public void disConnectCallBack(ResultBean resultBean) {
+        if (device != null) {
+            setConnected(device, false);
+        }
         executeCallback(DISCONNECT, resultBean);
     }
 
@@ -279,7 +284,7 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
         executeCallback(REMOVELOG, resultBean);
     }
 
-    private BluetoothDevice getDevice(String mac) {
+    private Peripheral getDevice(String mac) {
         Peripheral peripheral = null;
         try {
             BLECentralPlugin ble = (BLECentralPlugin) webView.getPluginManager().getPlugin("BLE");
@@ -293,7 +298,17 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
         if (peripheral == null) {
             throw new RuntimeException("未找到蓝牙设备");
         }
-        return peripheral.getDevice();
+        return peripheral;
+    }
+
+    private void setConnected(Peripheral peripheral, boolean connected) {
+        try {
+            Field field = Peripheral.class.getDeclaredField("connected");
+            field.setAccessible(true);
+            field.set(peripheral, connected);
+        } catch (Exception e) {
+            LOG.e(LOG_TAG, e.getMessage(), e);
+        }
     }
 
     private List<String> toStringList(JSONArray jsonArray) {
