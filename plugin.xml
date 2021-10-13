@@ -31,4 +31,26 @@
         <source-file src="src/android/libs/zbardecoder.jar" target-dir="libs"/>
         <framework src="com.google.code.gson:gson:2.8.6" />
     </platform>
+    <platform name="ios">
+        <preference name="IOS_INIT_ON_LOAD" default="true" />
+        <config-file target="config.xml" parent="/widget">
+            <feature name="MPBLE">
+                <param name="ios-package" value="MPBLE" onload="$IOS_INIT_ON_LOAD"/>
+            </feature>
+        </config-file>
+        <header-file src="src/ios/MPBLE.h" target-dir="MPBLE" />
+        <source-file src="src/ios/MPBLE.m" target-dir="MPBLE" />
+
+        <!-- frameworks -->
+        <framework src="YNTT14BleSDK.framework" />
+
+        <!-- iOS Permissions -->
+        <preference name="BLUETOOTH_USAGE_DESCRIPTION" default=" " />
+        <config-file target="*-Info.plist" parent="NSBluetoothPeripheralUsageDescription">
+            <string>$BLUETOOTH_USAGE_DESCRIPTION</string>
+        </config-file>
+        <config-file target="*-Info.plist" parent="NSBluetoothAlwaysUsageDescription">
+            <string>$BLUETOOTH_USAGE_DESCRIPTION</string>
+        </config-file>
+    </platform>
 </plugin>
