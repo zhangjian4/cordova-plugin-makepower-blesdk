@@ -84,9 +84,13 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
           return true;
         }
         case DISCONNECT: {
-          bleEntity.disConnect();
-          // 重新创建实例,不然下次会连不上
-          bleEntity = createEntity(type);
+          if(bleEntity==null){
+            callbackContext.success();
+          }else{
+            bleEntity.disConnect();
+            // 重新创建实例,不然下次会连不上
+            bleEntity = createEntity(type);
+          }
           return true;
         }
         case GETBLEINFO: {
