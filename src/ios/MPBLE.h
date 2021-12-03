@@ -14,6 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 //实现SDK功能
 -(void)coolMethod:(CDVInvokedUrlCommand *)command;
 - (void)scan:(CDVInvokedUrlCommand*)command;//扫描设备
+- (void)setType:(CDVInvokedUrlCommand*)command;//设置厂商编号
 - (void)bleConnect:(CDVInvokedUrlCommand*)command;//连接设备
 - (void)disConnect:(CDVInvokedUrlCommand *)command;//断开连接
 - (void)getBleInfo:(CDVInvokedUrlCommand *)command;//读取蓝牙信息

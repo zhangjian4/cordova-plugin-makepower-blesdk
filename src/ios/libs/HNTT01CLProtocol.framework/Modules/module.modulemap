@@ -1,0 +1,6 @@
+framework module HNTT01CLProtocol {
+  umbrella header "HNTT01CLProtocol.h"
+
+  export *
+  module * { export * }
+}

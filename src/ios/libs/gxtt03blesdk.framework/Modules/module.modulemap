@@ -1,0 +1,6 @@
+framework module gxtt03blesdk {
+  umbrella header "gxtt03blesdk.h"
+
+  export *
+  module * { export * }
+}

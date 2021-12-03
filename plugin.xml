@@ -38,12 +38,17 @@
                 <param name="ios-package" value="MPBLE" onload="$IOS_INIT_ON_LOAD"/>
             </feature>
         </config-file>
+
         <header-file src="src/ios/MPBLE.h" target-dir="MPBLE" />
         <source-file src="src/ios/MPBLE.m" target-dir="MPBLE" />
 
+        <header-file src="src/ios/MPDiscoverBlePeripheral.h" target-dir="MPDiscoverBlePeripheral" />
+        <source-file src="src/ios/MPDiscoverBlePeripheral.m" target-dir="MPDiscoverBlePeripheral" />
+
         <!-- frameworks -->
         <framework src="YNTT14BleSDK.framework" />
-
+        <framework src="HNTT01CLProtocol.framework" />
+        <framework src="gxtt03blesdk.framework" />
         <!-- iOS Permissions -->
         <preference name="BLUETOOTH_USAGE_DESCRIPTION" default=" " />
         <config-file target="*-Info.plist" parent="NSBluetoothPeripheralUsageDescription">
