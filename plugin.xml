@@ -29,6 +29,16 @@
         <source-file src="src/android/libs/hnttsdkbase.jar" target-dir="libs"/>
         <source-file src="src/android/libs/sdkbase.jar" target-dir="libs"/>
         <source-file src="src/android/libs/zbardecoder.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/szlw/szlw.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/szlw/arm64-v8a/libbleSimpleKey.so" target-dir="libs/arm64-v8a"/>
+        <source-file src="src/android/libs/szlw/armeabi-v7a/libbleSimpleKey.so" target-dir="libs/armeabi-v7a"/>
+        <source-file src="src/android/libs/szlw/x86/libbleSimpleKey.so" target-dir="libs/x86"/>
+        <source-file src="src/android/libs/szlw/x86_64/libbleSimpleKey.so" target-dir="libs/x86_64"/>
+        <source-file src="src/android/libs/xzkr/xzkr.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/xzkr/arm64-v8a/liblibBleLock.so" target-dir="libs/arm64-v8a"/>
+        <source-file src="src/android/libs/xzkr/armeabi-v7a/liblibBleLock.so" target-dir="libs/armeabi-v7a"/>
+        <source-file src="src/android/libs/xzkr/x86/liblibBleLock.so" target-dir="libs/x86"/>
+        <source-file src="src/android/libs/xzkr/x86_64/liblibBleLock.so" target-dir="libs/x86_64"/>
         <framework src="com.google.code.gson:gson:2.8.6" />
     </platform>
     <platform name="ios">
