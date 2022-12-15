@@ -177,13 +177,13 @@ public class MPBLE extends CordovaPlugin implements SdkMethodInterCallBack {
       return new cc.makepower.sdk.hc.BleBase(this);
     } else if ("yisuo".equals(type)) {
       return new cc.makepower.sdk.yisuo.BleBase(this);
-    } else if ("szlw".equals(type)) {
-      return new com.android.blesdk01.BleBase(this);
-    } else if ("xzkr".equals(type)) {
-      return new com.android.blesdk.BleBase(this);
     } else {
       try {
-        Class<?> clazz = Class.forName("com." + type + ".android.blesdk.BleBase");
+        String className="com." + type + ".android.blesdk.BleBase";
+        if("ra29".equals(type)||"saier01".equals(type)){
+          className="com." + type + ".android.blesdk.sdk.BleBase";
+        }
+        Class<?> clazz = Class.forName(className);
         Constructor constructor = clazz.getConstructor(SdkMethodInterCallBack.class);
         return (SdkMethodInterFace) constructor.newInstance(this);
       } catch (ClassNotFoundException e) {
