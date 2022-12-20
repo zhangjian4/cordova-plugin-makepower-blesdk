@@ -32,8 +32,11 @@
         <source-file src="src/android/libs/gzbx09.jar" target-dir="libs"/>
         <source-file src="src/android/libs/dgm01.jar" target-dir="libs"/>
         <source-file src="src/android/libs/jlst01.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/ra29.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/saier01.jar" target-dir="libs"/>
         <source-file src="src/android/libs/szlw06.jar" target-dir="libs"/>
         <source-file src="src/android/libs/cygc01.jar" target-dir="libs"/>
+        <source-file src="src/android/libs/krat16.jar" target-dir="libs"/>
         <framework src="com.google.code.gson:gson:2.8.6" />
     </platform>
     <platform name="ios">
